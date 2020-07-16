@@ -34,6 +34,10 @@ for y in "${REPO}/examples/contour/"*.yaml ; do
     */02-job-certgen.yaml)
         cat "$y"
         ;;
+    */*contour*.yaml)
+        echo "---"
+        sed 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' < "$y" | yq write - metadata.labels[kubernetes.io/version] $1 |  yq write - metadata.labels[kubernetes.io/app] $2
+        ;;
     *)
         sed 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' < "$y"
         ;;
