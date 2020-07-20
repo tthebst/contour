@@ -1,4 +1,4 @@
-// Copyright © 2020 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -72,12 +72,12 @@ func routeCluster(cluster string) *envoy_api_v2_route.Route_Route {
 	}
 }
 
-func routePrefix(prefix string, headers ...dag.HeaderCondition) *envoy_api_v2_route.RouteMatch {
+func routePrefix(prefix string, headers ...dag.HeaderMatchCondition) *envoy_api_v2_route.RouteMatch {
 	return envoy.RouteMatch(&dag.Route{
-		PathCondition: &dag.PrefixCondition{
+		PathMatchCondition: &dag.PrefixMatchCondition{
 			Prefix: prefix,
 		},
-		HeaderConditions: headers,
+		HeaderMatchConditions: headers,
 	})
 }
 

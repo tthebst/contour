@@ -1,4 +1,4 @@
-// Copyright © 2020 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -69,7 +69,7 @@ func TestTCPProxy(t *testing.T) {
 				},
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: "wrong-backend",
 					Port: 80,
@@ -96,6 +96,7 @@ func TestTCPProxy(t *testing.T) {
 				ListenerFilters: envoy.ListenerFilters(
 					envoy.TLSInspector(),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			staticListener(),
 		),
@@ -189,6 +190,7 @@ func TestTCPProxyDelegation(t *testing.T) {
 				ListenerFilters: envoy.ListenerFilters(
 					envoy.TLSInspector(),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			staticListener(),
 		),
@@ -240,7 +242,7 @@ func TestTCPProxyTLSPassthrough(t *testing.T) {
 				},
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: "wrong-backend",
 					Port: 80,
@@ -272,6 +274,7 @@ func TestTCPProxyTLSPassthrough(t *testing.T) {
 				ListenerFilters: envoy.ListenerFilters(
 					envoy.TLSInspector(),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			staticListener(),
 		),
@@ -358,6 +361,7 @@ func TestTCPProxyTLSBackend(t *testing.T) {
 				ListenerFilters: envoy.ListenerFilters(
 					envoy.TLSInspector(),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			staticListener(),
 		),
@@ -425,7 +429,7 @@ func TestTCPProxyAndHTTPService(t *testing.T) {
 				},
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: svc.Name,
 					Port: 80,
@@ -453,6 +457,7 @@ func TestTCPProxyAndHTTPService(t *testing.T) {
 				FilterChains: envoy.FilterChains(
 					envoy.HTTPConnectionManager("ingress_http", envoy.FileAccessLogEnvoy("/dev/stdout"), 0),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			&v2.Listener{
 				// ingress_https is present for
@@ -465,6 +470,7 @@ func TestTCPProxyAndHTTPService(t *testing.T) {
 				ListenerFilters: envoy.ListenerFilters(
 					envoy.TLSInspector(),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			staticListener(),
 		),
@@ -529,7 +535,7 @@ func TestTCPProxyAndHTTPServicePermitInsecure(t *testing.T) {
 				},
 			},
 			Routes: []projcontour.Route{{
-				Conditions:     conditions(prefixCondition("/")),
+				Conditions:     matchconditions(prefixMatchCondition("/")),
 				PermitInsecure: true,
 				Services: []projcontour.Service{{
 					Name: svc.Name,
@@ -558,6 +564,7 @@ func TestTCPProxyAndHTTPServicePermitInsecure(t *testing.T) {
 				FilterChains: envoy.FilterChains(
 					envoy.HTTPConnectionManager("ingress_http", envoy.FileAccessLogEnvoy("/dev/stdout"), 0),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			&v2.Listener{
 				// ingress_https is present for
@@ -570,6 +577,7 @@ func TestTCPProxyAndHTTPServicePermitInsecure(t *testing.T) {
 				ListenerFilters: envoy.ListenerFilters(
 					envoy.TLSInspector(),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			staticListener(),
 		),
@@ -629,7 +637,7 @@ func TestTCPProxyTLSPassthroughAndHTTPService(t *testing.T) {
 				},
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: svc.Name,
 					Port: 80,
@@ -656,6 +664,7 @@ func TestTCPProxyTLSPassthroughAndHTTPService(t *testing.T) {
 				FilterChains: envoy.FilterChains(
 					envoy.HTTPConnectionManager("ingress_http", envoy.FileAccessLogEnvoy("/dev/stdout"), 0),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			&v2.Listener{
 				// ingress_https is present for
@@ -673,6 +682,7 @@ func TestTCPProxyTLSPassthroughAndHTTPService(t *testing.T) {
 				ListenerFilters: envoy.ListenerFilters(
 					envoy.TLSInspector(),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			staticListener(),
 		),
@@ -730,7 +740,7 @@ func TestTCPProxyTLSPassthroughAndHTTPServicePermitInsecure(t *testing.T) {
 				},
 			},
 			Routes: []projcontour.Route{{
-				Conditions:     conditions(prefixCondition("/")),
+				Conditions:     matchconditions(prefixMatchCondition("/")),
 				PermitInsecure: true,
 				Services: []projcontour.Service{{
 					Name: svc.Name,
@@ -759,6 +769,7 @@ func TestTCPProxyTLSPassthroughAndHTTPServicePermitInsecure(t *testing.T) {
 				FilterChains: envoy.FilterChains(
 					envoy.HTTPConnectionManager("ingress_http", envoy.FileAccessLogEnvoy("/dev/stdout"), 0),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			&v2.Listener{
 				// ingress_https is present for
@@ -777,6 +788,7 @@ func TestTCPProxyTLSPassthroughAndHTTPServicePermitInsecure(t *testing.T) {
 				ListenerFilters: envoy.ListenerFilters(
 					envoy.TLSInspector(),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			staticListener(),
 		),
@@ -843,7 +855,7 @@ func TestTCPProxyMissingTLS(t *testing.T) {
 				// missing TLS:
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: svc.Name,
 					Port: 80,
@@ -891,7 +903,7 @@ func TestTCPProxyMissingTLS(t *testing.T) {
 				},
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: svc.Name,
 					Port: 80,

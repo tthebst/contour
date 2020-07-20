@@ -1,4 +1,4 @@
-// Copyright © 2019 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -82,8 +82,9 @@ func (b *Builder) reset() {
 	b.statuses = make(map[k8s.FullName]Status, len(b.statuses))
 }
 
-// lookupService returns a Service that matches the Meta and Port of the Kubernetes' Service.
-func (b *Builder) lookupService(m k8s.FullName, port intstr.IntOrString) *Service {
+// lookupService returns a Service that matches the Meta and Port of the Kubernetes' Service,
+// or an error if the service or port can't be located.
+func (b *Builder) lookupService(m k8s.FullName, port intstr.IntOrString) (*Service, error) {
 	lookup := func() *Service {
 		if port.Type != intstr.Int {
 			// can't handle, give up
@@ -99,22 +100,22 @@ func (b *Builder) lookupService(m k8s.FullName, port intstr.IntOrString) *Servic
 
 	s := lookup()
 	if s != nil {
-		return s
+		return s, nil
 	}
 	svc, ok := b.Source.services[m]
 	if !ok {
-		return nil
+		return nil, fmt.Errorf("service %q not found", m)
 	}
 	for i := range svc.Spec.Ports {
 		p := &svc.Spec.Ports[i]
 		switch {
 		case int(p.Port) == port.IntValue():
-			return b.addService(svc, p)
+			return b.addService(svc, p), nil
 		case port.String() == p.Name:
-			return b.addService(svc, p)
+			return b.addService(svc, p), nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("port %q on service %q not matched", port.String(), m)
 }
 
 func (b *Builder) addService(svc *v1.Service, port *v1.ServicePort) *Service {
@@ -322,8 +323,8 @@ func (b *Builder) computeIngressRule(ing *v1beta1.Ingress, rule v1beta1.IngressR
 		path := stringOrDefault(httppath.Path, "/")
 		be := httppath.Backend
 		m := k8s.FullName{Name: be.ServiceName, Namespace: ing.Namespace}
-		s := b.lookupService(m, be.ServicePort)
-		if s == nil {
+		s, err := b.lookupService(m, be.ServicePort)
+		if err != nil {
 			continue
 		}
 
@@ -503,7 +504,7 @@ func expandPrefixMatches(routes []*Route) []*Route {
 			expandedRoutes = append(expandedRoutes, r)
 		}
 
-		routingPrefix := r.PathCondition.(*PrefixCondition).Prefix
+		routingPrefix := r.PathMatchCondition.(*PrefixMatchCondition).Prefix
 
 		if routingPrefix != "/" {
 			routingPrefix = strings.TrimRight(routingPrefix, "/")
@@ -525,7 +526,7 @@ func expandPrefixMatches(routes []*Route) []*Route {
 				continue
 			}
 
-			routingPrefix := routes[0].PathCondition.(*PrefixCondition).Prefix
+			routingPrefix := routes[0].PathMatchCondition.(*PrefixMatchCondition).Prefix
 
 			// There's no alternate forms for '/' :)
 			if routingPrefix == "/" {
@@ -537,10 +538,10 @@ func expandPrefixMatches(routes []*Route) []*Route {
 
 			// Now, make the original route handle '/foo' and the new route handle '/foo'.
 			routes[0].PrefixRewrite = strings.TrimRight(routes[0].PrefixRewrite, "/")
-			routes[0].PathCondition = &PrefixCondition{Prefix: prefix}
+			routes[0].PathMatchCondition = &PrefixMatchCondition{Prefix: prefix}
 
 			newRoute.PrefixRewrite = routes[0].PrefixRewrite + "/"
-			newRoute.PathCondition = &PrefixCondition{Prefix: prefix + "/"}
+			newRoute.PathMatchCondition = &PrefixMatchCondition{Prefix: prefix + "/"}
 
 			// Since we trimmed trailing '/', it's possible that
 			// we made the replacement empty. There's no such
@@ -584,7 +585,7 @@ func getProtocol(service projcontour.Service, s *Service) (string, error) {
 	return protocol, nil
 }
 
-func (b *Builder) computeRoutes(sw *ObjectStatusWriter, proxy *projcontour.HTTPProxy, conditions []projcontour.Condition, visited []*projcontour.HTTPProxy, enforceTLS bool) []*Route {
+func (b *Builder) computeRoutes(sw *ObjectStatusWriter, proxy *projcontour.HTTPProxy, conditions []projcontour.MatchCondition, visited []*projcontour.HTTPProxy, enforceTLS bool) []*Route {
 	for _, v := range visited {
 		// ensure we are not following an edge that produces a cycle
 		var path []string
@@ -602,7 +603,7 @@ func (b *Builder) computeRoutes(sw *ObjectStatusWriter, proxy *projcontour.HTTPP
 	var routes []*Route
 
 	// Check for duplicate conditions on the includes
-	if includeConditionsIdentical(proxy.Spec.Includes) {
+	if includeMatchConditionsIdentical(proxy.Spec.Includes) {
 		sw.SetInvalid("duplicate conditions defined on an include")
 		return nil
 	}
@@ -624,7 +625,7 @@ func (b *Builder) computeRoutes(sw *ObjectStatusWriter, proxy *projcontour.HTTPP
 			return nil
 		}
 
-		if err := pathConditionsValid(include.Conditions); err != nil {
+		if err := pathMatchConditionsValid(include.Conditions); err != nil {
 			sw.SetInvalid("include: %s", err)
 			return nil
 		}
@@ -638,7 +639,7 @@ func (b *Builder) computeRoutes(sw *ObjectStatusWriter, proxy *projcontour.HTTPP
 	}
 
 	for _, route := range proxy.Spec.Routes {
-		if err := pathConditionsValid(route.Conditions); err != nil {
+		if err := pathMatchConditionsValid(route.Conditions); err != nil {
 			sw.SetInvalid("route: %s", err)
 			return nil
 		}
@@ -646,7 +647,7 @@ func (b *Builder) computeRoutes(sw *ObjectStatusWriter, proxy *projcontour.HTTPP
 		conds := append(conditions, route.Conditions...)
 
 		// Look for invalid header conditions on this route
-		if err := headerConditionsValid(conds); err != nil {
+		if err := headerMatchConditionsValid(conds); err != nil {
 			sw.SetInvalid(err.Error())
 			return nil
 		}
@@ -669,8 +670,8 @@ func (b *Builder) computeRoutes(sw *ObjectStatusWriter, proxy *projcontour.HTTPP
 		}
 
 		r := &Route{
-			PathCondition:         mergePathConditions(conds),
-			HeaderConditions:      mergeHeaderConditions(conds),
+			PathMatchCondition:    mergePathMatchConditions(conds),
+			HeaderMatchConditions: mergeHeaderMatchConditions(conds),
 			Websocket:             route.EnableWebsockets,
 			HTTPSUpgrade:          routeEnforceTLS(enforceTLS, route.PermitInsecure && !b.DisablePermitInsecure),
 			TimeoutPolicy:         timeoutPolicy(route.TimeoutPolicy),
@@ -694,7 +695,7 @@ func (b *Builder) computeRoutes(sw *ObjectStatusWriter, proxy *projcontour.HTTPP
 			// condition. Even if the CRD user didn't specify a
 			// prefix condition, mergePathConditions() guarantees
 			// a prefix of '/'.
-			routingPrefix := r.PathCondition.(*PrefixCondition).Prefix
+			routingPrefix := r.PathMatchCondition.(*PrefixMatchCondition).Prefix
 
 			// First, try to apply an exact prefix match.
 			for _, prefix := range route.GetPrefixReplacements() {
@@ -722,10 +723,9 @@ func (b *Builder) computeRoutes(sw *ObjectStatusWriter, proxy *projcontour.HTTPP
 				return nil
 			}
 			m := k8s.FullName{Name: service.Name, Namespace: proxy.Namespace}
-			s := b.lookupService(m, intstr.FromInt(service.Port))
-
-			if s == nil {
-				sw.SetInvalid("Service [%s:%d] is invalid or missing", service.Name, service.Port)
+			s, err := b.lookupService(m, intstr.FromInt(service.Port))
+			if err != nil {
+				sw.SetInvalid("Spec.Routes unresolved service reference: %s", err)
 				return nil
 			}
 
@@ -819,7 +819,7 @@ func escapeHeaderValue(value string) string {
 	return strings.Replace(value, "%", "%%", -1)
 }
 
-func includeConditionsIdentical(includes []projcontour.Include) bool {
+func includeMatchConditionsIdentical(includes []projcontour.Include) bool {
 	j := 0
 	for i := 1; i < len(includes); i++ {
 		// Now compare each include's set of conditions
@@ -989,9 +989,9 @@ func (b *Builder) processHTTPProxyTCPProxy(sw *ObjectStatusWriter, httpproxy *pr
 		var proxy TCPProxy
 		for _, service := range httpproxy.Spec.TCPProxy.Services {
 			m := k8s.FullName{Name: service.Name, Namespace: httpproxy.Namespace}
-			s := b.lookupService(m, intstr.FromInt(service.Port))
-			if s == nil {
-				sw.SetInvalid("tcpproxy: service %s/%s/%d: not found", httpproxy.Namespace, service.Name, service.Port)
+			s, err := b.lookupService(m, intstr.FromInt(service.Port))
+			if err != nil {
+				sw.SetInvalid("Spec.TCPProxy unresolved service reference: %s", err)
 				return false
 			}
 			proxy.Clusters = append(proxy.Clusters, &Cluster{
@@ -1078,11 +1078,11 @@ func route(ingress *v1beta1.Ingress, path string, service *Service) *Route {
 
 	if strings.ContainsAny(path, "^+*[]%") {
 		// path smells like a regex
-		r.PathCondition = &RegexCondition{Regex: path}
+		r.PathMatchCondition = &RegexMatchCondition{Regex: path}
 		return r
 	}
 
-	r.PathCondition = &PrefixCondition{Prefix: path}
+	r.PathMatchCondition = &PrefixMatchCondition{Prefix: path}
 	return r
 }
 

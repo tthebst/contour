@@ -1,4 +1,4 @@
-// Copyright © 2019 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -172,20 +172,20 @@ func TestWebsocketHTTPProxy(t *testing.T) {
 		Spec: projcontour.HTTPProxySpec{
 			VirtualHost: &projcontour.VirtualHost{Fqdn: "websocket.hello.world"},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: s1.Name,
 					Port: 80,
 				}},
 			}, {
-				Conditions:       conditions(prefixCondition("/ws-1")),
+				Conditions:       matchconditions(prefixMatchCondition("/ws-1")),
 				EnableWebsockets: true,
 				Services: []projcontour.Service{{
 					Name: s1.Name,
 					Port: 80,
 				}},
 			}, {
-				Conditions:       conditions(prefixCondition("/ws-2")),
+				Conditions:       matchconditions(prefixMatchCondition("/ws-2")),
 				EnableWebsockets: true,
 				Services: []projcontour.Service{{
 					Name: s1.Name,
@@ -226,13 +226,13 @@ func TestWebsocketHTTPProxy(t *testing.T) {
 		Spec: projcontour.HTTPProxySpec{
 			VirtualHost: &projcontour.VirtualHost{Fqdn: "websocket.hello.world"},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: s1.Name,
 					Port: 80,
 				}},
 			}, {
-				Conditions:       conditions(prefixCondition("/ws-1")),
+				Conditions:       matchconditions(prefixMatchCondition("/ws-1")),
 				EnableWebsockets: true,
 				Services: []projcontour.Service{{
 					Name: s1.Name,
@@ -242,7 +242,7 @@ func TestWebsocketHTTPProxy(t *testing.T) {
 					Port: 80,
 				}},
 			}, {
-				Conditions:       conditions(prefixCondition("/ws-2")),
+				Conditions:       matchconditions(prefixMatchCondition("/ws-2")),
 				EnableWebsockets: true,
 				Services: []projcontour.Service{{
 					Name: s1.Name,

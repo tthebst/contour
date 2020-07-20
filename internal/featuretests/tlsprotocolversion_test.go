@@ -1,4 +1,4 @@
-// Copyright © 2020 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -93,6 +93,7 @@ func TestTLSMinimumProtocolVersion(t *testing.T) {
 						httpsFilterFor("kuard.example.com"),
 						nil, "h2", "http/1.1"),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 		),
 		TypeUrl: listenerType,
@@ -142,6 +143,7 @@ func TestTLSMinimumProtocolVersion(t *testing.T) {
 				envoy.Filters(httpsFilterFor("kuard.example.com")),
 			),
 		},
+		SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 	}
 
 	c.Request(listenerType, "ingress_https").Equals(&v2.DiscoveryResponse{
@@ -167,7 +169,7 @@ func TestTLSMinimumProtocolVersion(t *testing.T) {
 				},
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: s1.Name,
 					Port: 80,

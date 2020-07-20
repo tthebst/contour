@@ -1,4 +1,4 @@
-// Copyright © 2019 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -574,7 +574,7 @@ func TestIngressClassUpdate(t *testing.T) {
 		),
 		TypeUrl: routeType,
 	}).Status(vhost).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	)
 
 	// Updating to the non-configured ingress class should remove the

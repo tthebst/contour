@@ -1,4 +1,4 @@
-// Copyright © 2020 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -95,6 +95,7 @@ func TestDownstreamTLSCertificateValidation(t *testing.T) {
 		FilterChains: envoy.FilterChains(
 			envoy.HTTPConnectionManager("ingress_http", envoy.FileAccessLogEnvoy("/dev/stdout"), 0),
 		),
+		SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 	}
 
 	ingress_https := &v2.Listener{
@@ -114,6 +115,7 @@ func TestDownstreamTLSCertificateValidation(t *testing.T) {
 				"h2", "http/1.1",
 			),
 		),
+		SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 	}
 
 	c.Request(listenerType).Equals(&v2.DiscoveryResponse{
@@ -124,7 +126,7 @@ func TestDownstreamTLSCertificateValidation(t *testing.T) {
 		),
 		TypeUrl: listenerType,
 	}).Status(proxy).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	)
 
 }

@@ -1,4 +1,4 @@
-// Copyright © 2019 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -59,7 +59,7 @@ func basic(t *testing.T) {
 				Fqdn: "kuard.projectcontour.io",
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/api")),
+				Conditions: matchconditions(prefixMatchCondition("/api")),
 				Services: []projcontour.Service{{
 					Name: "kuard",
 					Port: 8080,
@@ -93,7 +93,7 @@ func basic(t *testing.T) {
 		),
 		TypeUrl: routeType,
 	}).Status(vhost).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	)
 
 	// Update the vhost to make the replacement ambiguous. This should remove the generated config.
@@ -111,7 +111,7 @@ func basic(t *testing.T) {
 			envoy.RouteConfiguration("ingress_http"),
 		),
 		TypeUrl: routeType,
-	}).Status(vhost).Equals(projcontour.Status{
+	}).Status(vhost).Equals(projcontour.HTTPProxyStatus{
 		CurrentStatus: k8s.StatusInvalid,
 		Description:   "ambiguous prefix replacement",
 	})
@@ -143,7 +143,7 @@ func basic(t *testing.T) {
 		),
 		TypeUrl: routeType,
 	}).Status(vhost).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	)
 
 	// But having duplicate prefixes in the replacements makes
@@ -162,7 +162,7 @@ func basic(t *testing.T) {
 			envoy.RouteConfiguration("ingress_http"),
 		),
 		TypeUrl: routeType,
-	}).Status(vhost).Equals(projcontour.Status{
+	}).Status(vhost).Equals(projcontour.HTTPProxyStatus{
 		CurrentStatus: k8s.StatusInvalid,
 		Description:   "duplicate replacement prefix '/foo'",
 	})
@@ -194,7 +194,7 @@ func basic(t *testing.T) {
 		),
 		TypeUrl: routeType,
 	}).Status(vhost).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	)
 
 	// If we remove the prefix match condition, the implicit '/' prefix
@@ -218,7 +218,7 @@ func basic(t *testing.T) {
 		),
 		TypeUrl: routeType,
 	}).Status(vhost).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	)
 }
 
@@ -245,7 +245,7 @@ func multiInclude(t *testing.T) {
 			Includes: []projcontour.Include{{
 				Name:       "app",
 				Namespace:  "default",
-				Conditions: conditions(prefixCondition("/v1")),
+				Conditions: matchconditions(prefixMatchCondition("/v1")),
 			}},
 		})
 
@@ -257,7 +257,7 @@ func multiInclude(t *testing.T) {
 			Includes: []projcontour.Include{{
 				Name:       "app",
 				Namespace:  "default",
-				Conditions: conditions(prefixCondition("/v2")),
+				Conditions: matchconditions(prefixMatchCondition("/v2")),
 			}},
 		})
 
@@ -308,9 +308,9 @@ func multiInclude(t *testing.T) {
 		),
 		TypeUrl: routeType,
 	}).Status(vhost1).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	).Status(vhost2).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	)
 
 	// Remove one of the replacements, and one cluster loses the rewrite.
@@ -345,9 +345,9 @@ func multiInclude(t *testing.T) {
 		),
 		TypeUrl: routeType,
 	}).Status(vhost1).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	).Status(vhost2).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	)
 }
 
@@ -376,7 +376,7 @@ func replaceWithSlash(t *testing.T) {
 					Name: "kuard",
 					Port: 8080,
 				}},
-				Conditions: conditions(prefixCondition("/foo")),
+				Conditions: matchconditions(prefixMatchCondition("/foo")),
 				PathRewritePolicy: &projcontour.PathRewritePolicy{
 					ReplacePrefix: []projcontour.ReplacePrefix{
 						{Replacement: "/"},
@@ -395,7 +395,7 @@ func replaceWithSlash(t *testing.T) {
 					Name: "kuard",
 					Port: 8080,
 				}},
-				Conditions: conditions(prefixCondition("/bar/")),
+				Conditions: matchconditions(prefixMatchCondition("/bar/")),
 				PathRewritePolicy: &projcontour.PathRewritePolicy{
 					ReplacePrefix: []projcontour.ReplacePrefix{
 						{Replacement: "/"},
@@ -437,9 +437,9 @@ func replaceWithSlash(t *testing.T) {
 		),
 		TypeUrl: routeType,
 	}).Status(vhost1).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	).Status(vhost2).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	)
 
 	// Not swap the routing and replacement prefixes. Because the routing
@@ -447,7 +447,7 @@ func replaceWithSlash(t *testing.T) {
 	// to whatever the client URL is. No special handling of trailing '/'.
 	update(rh, vhost2,
 		func(vhost *projcontour.HTTPProxy) {
-			vhost.Spec.Routes[0].Conditions = conditions(prefixCondition("/"))
+			vhost.Spec.Routes[0].Conditions = matchconditions(prefixMatchCondition("/"))
 			vhost.Spec.Routes[0].PathRewritePolicy = &projcontour.PathRewritePolicy{
 				ReplacePrefix: []projcontour.ReplacePrefix{
 					{Replacement: "/bar"},
@@ -478,9 +478,9 @@ func replaceWithSlash(t *testing.T) {
 		),
 		TypeUrl: routeType,
 	}).Status(vhost1).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	).Status(vhost2).Like(
-		projcontour.Status{CurrentStatus: k8s.StatusValid},
+		projcontour.HTTPProxyStatus{CurrentStatus: k8s.StatusValid},
 	)
 }
 
@@ -530,10 +530,10 @@ func artifactoryDocker(t *testing.T) {
 				Fqdn: "artifactory.projectcontour.io",
 			},
 			Includes: []projcontour.Include{
-				{Name: "routes", Conditions: conditions(prefixCondition("/v2/container-sandbox"))},
-				{Name: "routes", Conditions: conditions(prefixCondition("/v2/container-release"))},
-				{Name: "routes", Conditions: conditions(prefixCondition("/v2/container-external"))},
-				{Name: "routes", Conditions: conditions(prefixCondition("/v2/container-public"))},
+				{Name: "routes", Conditions: matchconditions(prefixMatchCondition("/v2/container-sandbox"))},
+				{Name: "routes", Conditions: matchconditions(prefixMatchCondition("/v2/container-release"))},
+				{Name: "routes", Conditions: matchconditions(prefixMatchCondition("/v2/container-external"))},
+				{Name: "routes", Conditions: matchconditions(prefixMatchCondition("/v2/container-public"))},
 			},
 		}),
 	)

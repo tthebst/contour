@@ -1,4 +1,4 @@
-// Copyright © 2020 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -87,7 +87,7 @@ func TestRootNamespaces(t *testing.T) {
 				Fqdn: "hp1.example.com",
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: svc1.Name,
 					Port: 8080,
@@ -124,7 +124,7 @@ func TestRootNamespaces(t *testing.T) {
 				Fqdn: "hp2.example.com",
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: svc2.Name,
 					Port: 8080,
@@ -143,6 +143,7 @@ func TestRootNamespaces(t *testing.T) {
 				FilterChains: envoy.FilterChains(
 					envoy.HTTPConnectionManager("ingress_http", envoy.FileAccessLogEnvoy("/dev/stdout"), 0),
 				),
+				SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 			},
 			staticListener(),
 		),

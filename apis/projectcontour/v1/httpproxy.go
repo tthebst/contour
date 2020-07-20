@@ -1,4 +1,4 @@
-// Copyright © 2019 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -42,27 +42,33 @@ type Include struct {
 	// Namespace of the HTTPProxy to include. Defaults to the current namespace if not supplied.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
-	// Conditions are a set of routing properties that is applied to an HTTPProxy in a namespace.
+	// Conditions are a set of rules that are applied to included HTTPProxies.
+	// In effect, they are added onto the Conditions of included HTTPProxy Route
+	// structs.
+	// When applied, they are merged using AND, with one exception:
+	// There can be only one Prefix MatchCondition per Conditions slice.
+	// More than one Prefix, or contradictory Conditions, will make the
+	// include invalid.
 	// +optional
-	Conditions []Condition `json:"conditions,omitempty"`
+	Conditions []MatchCondition `json:"conditions,omitempty"`
 }
 
-// Condition are policies that are applied on top of HTTPProxies.
+// MatchCondition are a general holder for matching rules for HTTPProxies.
 // One of Prefix or Header must be provided.
-type Condition struct {
+type MatchCondition struct {
 	// Prefix defines a prefix match for a request.
 	// +optional
 	Prefix string `json:"prefix,omitempty"`
 
 	// Header specifies the header condition to match.
 	// +optional
-	Header *HeaderCondition `json:"header,omitempty"`
+	Header *HeaderMatchCondition `json:"header,omitempty"`
 }
 
-// HeaderCondition specifies how to conditionally match against HTTP
+// HeaderMatchCondition specifies how to conditionally match against HTTP
 // headers. The Name field is required, but only one of the remaining
 // fields should be be provided.
-type HeaderCondition struct {
+type HeaderMatchCondition struct {
 	// Name is the name of the header to match against. Name is required.
 	// Header names are case insensitive.
 	Name string `json:"name"`
@@ -139,9 +145,13 @@ type TLS struct {
 
 // Route contains the set of routes for a virtual host.
 type Route struct {
-	// Conditions are a set of routing properties that is applied to an HTTPProxy in a namespace.
+	// Conditions are a set of rules that are applied to a Route.
+	// When applied, they are merged using AND, with one exception:
+	// There can be only one Prefix MatchCondition per Conditions slice.
+	// More than one Prefix, or contradictory Conditions, will make the
+	// route invalid.
 	// +optional
-	Conditions []Condition `json:"conditions,omitempty"`
+	Conditions []MatchCondition `json:"conditions,omitempty"`
 	// Services are the services to proxy traffic.
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:Required
@@ -191,8 +201,7 @@ type TCPProxy struct {
 	// +optional
 	LoadBalancerPolicy *LoadBalancerPolicy `json:"loadBalancerPolicy,omitempty"`
 	// Services are the services to proxy traffic
-	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:Required
+	// +optional
 	Services []Service `json:"services"`
 	// Include specifies that this tcpproxy should be delegated to another HTTPProxy.
 	// +optional
@@ -314,6 +323,10 @@ type TimeoutPolicy struct {
 	Idle string `json:"idle,omitempty"`
 }
 
+// RetryOn is a string type alias with validation to ensure that the value is valid.
+// +kubebuilder:validation:Enum="5xx";gateway-error;reset;connect-failure;retriable-4xx;refused-stream;retriable-status-codes;retriable-headers;cancelled;deadline-exceeded;internal;resource-exhausted;unavailable
+type RetryOn string
+
 // RetryPolicy defines the attributes associated with retrying policy.
 type RetryPolicy struct {
 	// NumRetries is maximum allowed number of retries.
@@ -324,13 +337,40 @@ type RetryPolicy struct {
 	// PerTryTimeout specifies the timeout per retry attempt.
 	// Ignored if NumRetries is not supplied.
 	PerTryTimeout string `json:"perTryTimeout,omitempty"`
+	// RetryOn specifies the conditions on which to retry a request.
+	//
+	// Supported [HTTP conditions](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on):
+	//
+	// - `5xx`
+	// - `gateway-error`
+	// - `reset`
+	// - `connect-failure`
+	// - `retriable-4xx`
+	// - `refused-stream`
+	// - `retriable-status-codes`
+	// - `retriable-headers`
+	//
+	// Supported [gRPC conditions](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on):
+	//
+	// - `cancelled`
+	// - `deadline-exceeded`
+	// - `internal`
+	// - `resource-exhausted`
+	// - `unavailable`
+	// +optional
+	RetryOn []RetryOn `json:"retryOn,omitempty"`
+	// RetriableStatusCodes specifies the HTTP status codes that should be retried.
+	//
+	// This field is only respected when you include `retriable-status-codes` in the `RetryOn` field.
+	// +optional
+	RetriableStatusCodes []uint32 `json:"retriableStatusCodes,omitempty"`
 }
 
 // ReplacePrefix describes a path prefix replacement.
 type ReplacePrefix struct {
 	// Prefix specifies the URL path prefix to be replaced.
 	//
-	// If Prefix is specified, it must exactly match the Condition
+	// If Prefix is specified, it must exactly match the MatchCondition
 	// prefix that is rendered by the chain of including HTTPProxies
 	// and only that path prefix will be replaced by Replacement.
 	// This allows HTTPProxies that are included through multiple
@@ -418,8 +458,8 @@ type DownstreamValidation struct {
 	CACertificate string `json:"caSecret"`
 }
 
-// Status reports the current state of the HTTPProxy.
-type Status struct {
+// HTTPProxyStatus reports the current state of the HTTPProxy.
+type HTTPProxyStatus struct {
 	// +optional
 	CurrentStatus string `json:"currentStatus,omitempty"`
 	// +optional
@@ -446,7 +486,7 @@ type HTTPProxy struct {
 
 	Spec HTTPProxySpec `json:"spec"`
 	// +optional
-	Status Status `json:"status,omitempty"`
+	Status HTTPProxyStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -1,4 +1,4 @@
-// Copyright © 2019 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -167,7 +167,7 @@ func TestTimeoutPolicyRequestTimeout(t *testing.T) {
 		Spec: projcontour.HTTPProxySpec{
 			VirtualHost: &projcontour.VirtualHost{Fqdn: "test2.test.com"},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				TimeoutPolicy: &projcontour.TimeoutPolicy{
 					Response: "600", // not 600s
 				},
@@ -200,7 +200,7 @@ func TestTimeoutPolicyRequestTimeout(t *testing.T) {
 		Spec: projcontour.HTTPProxySpec{
 			VirtualHost: &projcontour.VirtualHost{Fqdn: "test2.test.com"},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				TimeoutPolicy: &projcontour.TimeoutPolicy{
 					Response: "3m",
 				},
@@ -233,7 +233,7 @@ func TestTimeoutPolicyRequestTimeout(t *testing.T) {
 		Spec: projcontour.HTTPProxySpec{
 			VirtualHost: &projcontour.VirtualHost{Fqdn: "test2.test.com"},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				TimeoutPolicy: &projcontour.TimeoutPolicy{
 					Response: "infinty",
 				},
@@ -289,7 +289,7 @@ func TestTimeoutPolicyIdleTimeout(t *testing.T) {
 		Spec: projcontour.HTTPProxySpec{
 			VirtualHost: &projcontour.VirtualHost{Fqdn: "test2.test.com"},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				TimeoutPolicy: &projcontour.TimeoutPolicy{
 					Idle: "600", // not 600s
 				},
@@ -322,7 +322,7 @@ func TestTimeoutPolicyIdleTimeout(t *testing.T) {
 		Spec: projcontour.HTTPProxySpec{
 			VirtualHost: &projcontour.VirtualHost{Fqdn: "test2.test.com"},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				TimeoutPolicy: &projcontour.TimeoutPolicy{
 					Idle: "3m",
 				},
@@ -355,7 +355,7 @@ func TestTimeoutPolicyIdleTimeout(t *testing.T) {
 		Spec: projcontour.HTTPProxySpec{
 			VirtualHost: &projcontour.VirtualHost{Fqdn: "test2.test.com"},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				TimeoutPolicy: &projcontour.TimeoutPolicy{
 					Idle: "infinty",
 				},

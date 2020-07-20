@@ -28,6 +28,7 @@ Where Contour settings can also be specified with command-line flags, the comman
 | leaderelection | leaderelection | | The [leader election configuration](#leader-election-configuration). |
 | request-timeout | [duration][4] | `0s` | This field specifies the default request timeout as a Go duration string. Zero means there is no timeout. |
 | tls | TLS | | The default [TLS configuration](#tls-configuration). |
+| timeouts | TimeoutConfig | | The [timeout configuration](#timeout-configuration). |
 {: class="table thead-dark table-bordered"}
 <br>
 
@@ -68,6 +69,19 @@ In the vast majority of deployments, only the `configmap-name` and `configmap-na
 {: class="table thead-dark table-bordered"}
 <br>
 
+### Timeout Configuration
+
+The timeout configuration block can be used to configure various timeouts for the proxies.
+
+| Field Name | Type| Default  | Description |
+|------------|-----|----------|-------------|
+| connection-idle-timeout| [duration][4] | `60s` | This field defines how long the proxy should wait while there are no active requests before terminating an HTTP connection. Set to 0 to disable the timeout. |
+| stream-idle-timeout| [duration][4] | `5m` | This field defines how long the proxy should wait while there is no stream activity before terminating a stream. Set to 0 to disable the timeout. |
+| max-connection-duration | [duration][4] | none | This field defines the maximum period of time after an HTTP connection has been established from the client to the proxy before it is closed by the proxy, regardless of whether there has been activity or not. Omit or set to 0 for no max duration. |
+| drain-timeout | [duration][4] | `5s` | This field defines how long the proxy will wait between sending an initial GOAWAY frame and a second, final GOAWAY frame when terminating an HTTP/2 connection. During this grace period, the proxy will continue to respond to new streams. After the final GOAWAY frame has been sent, the proxy will refuse new streams. Set to 0 for no grace period. |
+{: class="table thead-dark table-bordered"}
+<br>
+
 ### Configuration Example
 
 The following is an example ConfigMap with configuration file included:
@@ -86,7 +100,7 @@ data:
     # path to kubeconfig (if not running inside a k8s cluster)
     # kubeconfig: /path/to/.kube/config
     #
-    # disable ingressroute permitInsecure field
+    # disable httpproxy permitInsecure field
     # disablePermitInsecure: false
     tls:
       # minimum TLS version that Contour will negotiate
@@ -102,6 +116,12 @@ data:
     # default-http-versions:
     # - "HTTP/1.1"
     # - "HTTP/2"
+    # The following shows the default proxy timeout settings.
+    # timeouts:
+    #  connection-idle-timeout: 60s
+    #  stream-idle-timeout: 5m
+    #  max-connection-duration: 0s
+    #  drain-timeout: 5s
 ```
 
 _Note:_ The default example `contour` includes this [file][1] for easy deployment of Contour.

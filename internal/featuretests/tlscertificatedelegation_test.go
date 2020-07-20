@@ -1,4 +1,4 @@
-// Copyright © 2020 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -76,7 +76,7 @@ func TestTLSCertificateDelegation(t *testing.T) {
 				},
 			},
 			Routes: []projcontour.Route{{
-				Conditions: []projcontour.Condition{{
+				Conditions: []projcontour.MatchCondition{{
 					Prefix: "/",
 				}},
 				Services: []projcontour.Service{{
@@ -119,6 +119,7 @@ func TestTLSCertificateDelegation(t *testing.T) {
 		FilterChains: envoy.FilterChains(
 			envoy.HTTPConnectionManager("ingress_http", envoy.FileAccessLogEnvoy("/dev/stdout"), 0),
 		),
+		SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 	}
 
 	ingress_https := &v2.Listener{
@@ -132,6 +133,7 @@ func TestTLSCertificateDelegation(t *testing.T) {
 				httpsFilterFor("example.com"),
 				nil, "h2", "http/1.1"),
 		),
+		SocketOptions: envoy.TCPKeepaliveSocketOptions(),
 	}
 
 	c.Request(listenerType).Equals(&v2.DiscoveryResponse{
@@ -234,7 +236,7 @@ func TestTLSCertificateDelegation(t *testing.T) {
 				},
 			},
 			Routes: []projcontour.Route{{
-				Conditions: conditions(prefixCondition("/")),
+				Conditions: matchconditions(prefixMatchCondition("/")),
 				Services: []projcontour.Service{{
 					Name: s1.Name,
 					Port: 8080,

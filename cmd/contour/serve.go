@@ -1,4 +1,4 @@
-// Copyright © 2019 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -173,17 +173,21 @@ func doServe(log logrus.FieldLogger, ctx *serveContext) error {
 	}
 
 	listenerConfig := contour.ListenerVisitorConfig{
-		UseProxyProto:     ctx.useProxyProto,
-		HTTPAddress:       ctx.httpAddr,
-		HTTPPort:          ctx.httpPort,
-		HTTPAccessLog:     ctx.httpAccessLog,
-		HTTPSAddress:      ctx.httpsAddr,
-		HTTPSPort:         ctx.httpsPort,
-		HTTPSAccessLog:    ctx.httpsAccessLog,
-		AccessLogType:     ctx.AccessLogFormat,
-		AccessLogFields:   ctx.AccessLogFields,
-		MinimumTLSVersion: annotation.MinTLSVersion(ctx.TLSConfig.MinimumProtocolVersion),
-		RequestTimeout:    ctx.RequestTimeout,
+		UseProxyProto:         ctx.useProxyProto,
+		HTTPAddress:           ctx.httpAddr,
+		HTTPPort:              ctx.httpPort,
+		HTTPAccessLog:         ctx.httpAccessLog,
+		HTTPSAddress:          ctx.httpsAddr,
+		HTTPSPort:             ctx.httpsPort,
+		HTTPSAccessLog:        ctx.httpsAccessLog,
+		AccessLogType:         ctx.AccessLogFormat,
+		AccessLogFields:       ctx.AccessLogFields,
+		MinimumTLSVersion:     annotation.MinTLSVersion(ctx.TLSConfig.MinimumProtocolVersion),
+		RequestTimeout:        ctx.RequestTimeout,
+		ConnectionIdleTimeout: ctx.ConnectionIdleTimeout,
+		StreamIdleTimeout:     ctx.StreamIdleTimeout,
+		MaxConnectionDuration: ctx.MaxConnectionDuration,
+		DrainTimeout:          ctx.DrainTimeout,
 	}
 
 	defaultHTTPVersions, err := parseDefaultHTTPVersions(ctx.DefaultHTTPVersions)
@@ -238,8 +242,12 @@ func doServe(log logrus.FieldLogger, ctx *serveContext) error {
 	informerSyncList.InformOnResources(clusterInformerFactory, dynamicHandler, k8s.DefaultResources()...)
 
 	if ctx.UseExperimentalServiceAPITypes {
-		informerSyncList.InformOnResources(clusterInformerFactory,
-			dynamicHandler, k8s.ServiceAPIResources()...)
+		// Check if the resource exists in the API server before setting up the informer.
+		if !clients.ResourceExists(k8s.ServiceAPIResources()...) {
+			log.WithField("InformOnResources", "ExperimentalServiceAPITypes").Warnf("resources %v not found in api server", k8s.ServiceAPIResources())
+		} else {
+			informerSyncList.InformOnResources(clusterInformerFactory, dynamicHandler, k8s.ServiceAPIResources()...)
+		}
 	}
 
 	// TODO(youngnick): Move this logic out to internal/k8s/informers.go somehow.
@@ -366,6 +374,7 @@ func doServe(log logrus.FieldLogger, ctx *serveContext) error {
 		}
 		factory := clients.NewInformerFactoryForNamespace(ctx.EnvoyServiceNamespace)
 		informerSyncList.InformOnResources(factory, dynamicServiceHandler, k8s.ServicesResources()...)
+
 		g.Add(startInformer(factory, log.WithField("context", "serviceStatusLoadBalancerWatcher")))
 		log.WithField("envoy-service-name", ctx.EnvoyServiceName).
 			WithField("envoy-service-namespace", ctx.EnvoyServiceNamespace).

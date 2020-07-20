@@ -1,4 +1,4 @@
-// Copyright © 2020 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -492,7 +492,7 @@ func simpleProxyGenerator(name, ingressClass string, lbstatus v1.LoadBalancerSta
 			},
 		},
 
-		Status: projcontour.Status{
+		Status: projcontour.HTTPProxyStatus{
 			LoadBalancer: lbstatus,
 		},
 	}

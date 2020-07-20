@@ -144,8 +144,8 @@ TCPProxy
 <code>status</code>
 <br>
 <em>
-<a href="#projectcontour.io/v1.Status">
-Status
+<a href="#projectcontour.io/v1.HTTPProxyStatus">
+HTTPProxyStatus
 </a>
 </em>
 </td>
@@ -279,55 +279,6 @@ the secret will be delegated to.
 If TargetNamespaces is nil or empty, the CertificateDelegation&rsquo;
 is ignored. If the TargetNamespace list contains the character, &ldquo;*&rdquo;
 the secret will be delegated to all namespaces.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="projectcontour.io/v1.Condition">Condition
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#projectcontour.io/v1.Include">Include</a>, 
-<a href="#projectcontour.io/v1.Route">Route</a>)
-</p>
-<p>
-<p>Condition are policies that are applied on top of HTTPProxies.
-One of Prefix or Header must be provided.</p>
-</p>
-<table class="table table-striped table-borderless" style="border:none">
-<thead class="border-bottom">
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody class="border-top">
-<tr>
-<td style="white-space:nowrap">
-<code>prefix</code>
-<br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Prefix defines a prefix match for a request.</p>
-</td>
-</tr>
-<tr>
-<td style="white-space:nowrap">
-<code>header</code>
-<br>
-<em>
-<a href="#projectcontour.io/v1.HeaderCondition">
-HeaderCondition
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Header specifies the header condition to match.</p>
 </td>
 </tr>
 </tbody>
@@ -541,14 +492,72 @@ TCPProxy
 </tr>
 </tbody>
 </table>
-<h3 id="projectcontour.io/v1.HeaderCondition">HeaderCondition
+<h3 id="projectcontour.io/v1.HTTPProxyStatus">HTTPProxyStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#projectcontour.io/v1.Condition">Condition</a>)
+<a href="#projectcontour.io/v1.HTTPProxy">HTTPProxy</a>)
 </p>
 <p>
-<p>HeaderCondition specifies how to conditionally match against HTTP
+<p>HTTPProxyStatus reports the current state of the HTTPProxy.</p>
+</p>
+<table class="table table-striped table-borderless" style="border:none">
+<thead class="border-bottom">
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody class="border-top">
+<tr>
+<td style="white-space:nowrap">
+<code>currentStatus</code>
+<br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+</td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>description</code>
+<br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+</td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>loadBalancer</code>
+<br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#loadbalancerstatus-v1-core">
+Kubernetes core/v1.LoadBalancerStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LoadBalancer contains the current status of the load balancer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectcontour.io/v1.HeaderMatchCondition">HeaderMatchCondition
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#projectcontour.io/v1.MatchCondition">MatchCondition</a>)
+</p>
+<p>
+<p>HeaderMatchCondition specifies how to conditionally match against HTTP
 headers. The Name field is required, but only one of the remaining
 fields should be be provided.</p>
 </p>
@@ -788,14 +797,20 @@ string
 <code>conditions</code>
 <br>
 <em>
-<a href="#projectcontour.io/v1.Condition">
-[]Condition
+<a href="#projectcontour.io/v1.MatchCondition">
+[]MatchCondition
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions are a set of routing properties that is applied to an HTTPProxy in a namespace.</p>
+<p>Conditions are a set of rules that are applied to included HTTPProxies.
+In effect, they are added onto the Conditions of included HTTPProxy Route
+structs.
+When applied, they are merged using AND, with one exception:
+There can be only one Prefix MatchCondition per Conditions slice.
+More than one Prefix, or contradictory Conditions, will make the
+include invalid.</p>
 </td>
 </tr>
 </tbody>
@@ -833,6 +848,55 @@ across the pool of backend pods. Valid policy names are
 and <code>Cookie</code>. If an unknown strategy name is specified
 or no policy is supplied, the default <code>RoundRobin</code> policy
 is used.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectcontour.io/v1.MatchCondition">MatchCondition
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#projectcontour.io/v1.Include">Include</a>, 
+<a href="#projectcontour.io/v1.Route">Route</a>)
+</p>
+<p>
+<p>MatchCondition are a general holder for matching rules for HTTPProxies.
+One of Prefix or Header must be provided.</p>
+</p>
+<table class="table table-striped table-borderless" style="border:none">
+<thead class="border-bottom">
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody class="border-top">
+<tr>
+<td style="white-space:nowrap">
+<code>prefix</code>
+<br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Prefix defines a prefix match for a request.</p>
+</td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>header</code>
+<br>
+<em>
+<a href="#projectcontour.io/v1.HeaderMatchCondition">
+HeaderMatchCondition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Header specifies the header condition to match.</p>
 </td>
 </tr>
 </tbody>
@@ -903,7 +967,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>Prefix specifies the URL path prefix to be replaced.</p>
-<p>If Prefix is specified, it must exactly match the Condition
+<p>If Prefix is specified, it must exactly match the MatchCondition
 prefix that is rendered by the chain of including HTTPProxies
 and only that path prefix will be replaced by Replacement.
 This allows HTTPProxies that are included through multiple
@@ -928,6 +992,15 @@ will be replaced with. This must not be empty.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="projectcontour.io/v1.RetryOn">RetryOn
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#projectcontour.io/v1.RetryPolicy">RetryPolicy</a>)
+</p>
+<p>
+<p>RetryOn is a string type alias with validation to ensure that the value is valid.</p>
+</p>
 <h3 id="projectcontour.io/v1.RetryPolicy">RetryPolicy
 </h3>
 <p>
@@ -972,6 +1045,54 @@ string
 Ignored if NumRetries is not supplied.</p>
 </td>
 </tr>
+<tr>
+<td style="white-space:nowrap">
+<code>retryOn</code>
+<br>
+<em>
+<a href="#projectcontour.io/v1.RetryOn">
+[]RetryOn
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RetryOn specifies the conditions on which to retry a request.</p>
+<p>Supported <a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on">HTTP conditions</a>:</p>
+<ul>
+<li><code>5xx</code></li>
+<li><code>gateway-error</code></li>
+<li><code>reset</code></li>
+<li><code>connect-failure</code></li>
+<li><code>retriable-4xx</code></li>
+<li><code>refused-stream</code></li>
+<li><code>retriable-status-codes</code></li>
+<li><code>retriable-headers</code></li>
+</ul>
+<p>Supported <a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on">gRPC conditions</a>:</p>
+<ul>
+<li><code>cancelled</code></li>
+<li><code>deadline-exceeded</code></li>
+<li><code>internal</code></li>
+<li><code>resource-exhausted</code></li>
+<li><code>unavailable</code></li>
+</ul>
+</td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>retriableStatusCodes</code>
+<br>
+<em>
+[]uint32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RetriableStatusCodes specifies the HTTP status codes that should be retried.</p>
+<p>This field is only respected when you include <code>retriable-status-codes</code> in the <code>RetryOn</code> field.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="projectcontour.io/v1.Route">Route
@@ -996,14 +1117,18 @@ Ignored if NumRetries is not supplied.</p>
 <code>conditions</code>
 <br>
 <em>
-<a href="#projectcontour.io/v1.Condition">
-[]Condition
+<a href="#projectcontour.io/v1.MatchCondition">
+[]MatchCondition
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Conditions are a set of routing properties that is applied to an HTTPProxy in a namespace.</p>
+<p>Conditions are a set of rules that are applied to a Route.
+When applied, they are merged using AND, with one exception:
+There can be only one Prefix MatchCondition per Conditions slice.
+More than one Prefix, or contradictory Conditions, will make the
+route invalid.</p>
 </td>
 </tr>
 <tr>
@@ -1284,64 +1409,6 @@ HeadersPolicy
 </tr>
 </tbody>
 </table>
-<h3 id="projectcontour.io/v1.Status">Status
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#projectcontour.io/v1.HTTPProxy">HTTPProxy</a>)
-</p>
-<p>
-<p>Status reports the current state of the HTTPProxy.</p>
-</p>
-<table class="table table-striped table-borderless" style="border:none">
-<thead class="border-bottom">
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody class="border-top">
-<tr>
-<td style="white-space:nowrap">
-<code>currentStatus</code>
-<br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-</td>
-</tr>
-<tr>
-<td style="white-space:nowrap">
-<code>description</code>
-<br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-</td>
-</tr>
-<tr>
-<td style="white-space:nowrap">
-<code>loadBalancer</code>
-<br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#loadbalancerstatus-v1-core">
-Kubernetes core/v1.LoadBalancerStatus
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LoadBalancer contains the current status of the load balancer.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="projectcontour.io/v1.TCPHealthCheckPolicy">TCPHealthCheckPolicy
 </h3>
 <p>
@@ -1456,6 +1523,7 @@ LoadBalancerPolicy
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Services are the services to proxy traffic</p>
 </td>
 </tr>

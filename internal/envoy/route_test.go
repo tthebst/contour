@@ -1,4 +1,4 @@
-// Copyright © 2019 VMware
+// Copyright Project Contour Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -268,6 +268,30 @@ func TestRouteRoute(t *testing.T) {
 						RetryOn:       "503",
 						NumRetries:    protobuf.UInt32(6),
 						PerTryTimeout: protobuf.Duration(100 * time.Millisecond),
+					},
+				},
+			},
+		},
+		"retriable status codes: 502, 503, 504": {
+			route: &dag.Route{
+				RetryPolicy: &dag.RetryPolicy{
+					RetryOn:              "retriable-status-codes",
+					RetriableStatusCodes: []uint32{503, 503, 504},
+					NumRetries:           6,
+					PerTryTimeout:        100 * time.Millisecond,
+				},
+				Clusters: []*dag.Cluster{c1},
+			},
+			want: &envoy_api_v2_route.Route_Route{
+				Route: &envoy_api_v2_route.RouteAction{
+					ClusterSpecifier: &envoy_api_v2_route.RouteAction_Cluster{
+						Cluster: "default/kuard/8080/da39a3ee5e",
+					},
+					RetryPolicy: &envoy_api_v2_route.RetryPolicy{
+						RetryOn:              "retriable-status-codes",
+						RetriableStatusCodes: []uint32{503, 503, 504},
+						NumRetries:           protobuf.UInt32(6),
+						PerTryTimeout:        protobuf.Duration(100 * time.Millisecond),
 					},
 				},
 			},
@@ -691,7 +715,7 @@ func TestRouteMatch(t *testing.T) {
 	}{
 		"contains match with dashes": {
 			route: &dag.Route{
-				HeaderConditions: []dag.HeaderCondition{{
+				HeaderMatchConditions: []dag.HeaderMatchCondition{{
 					Name:      "x-header",
 					Value:     "11-22-33-44",
 					MatchType: "contains",
@@ -710,7 +734,7 @@ func TestRouteMatch(t *testing.T) {
 		},
 		"contains match with dots": {
 			route: &dag.Route{
-				HeaderConditions: []dag.HeaderCondition{{
+				HeaderMatchConditions: []dag.HeaderMatchCondition{{
 					Name:      "x-header",
 					Value:     "11.22.33.44",
 					MatchType: "contains",
@@ -729,7 +753,7 @@ func TestRouteMatch(t *testing.T) {
 		},
 		"contains match with regex group": {
 			route: &dag.Route{
-				HeaderConditions: []dag.HeaderCondition{{
+				HeaderMatchConditions: []dag.HeaderMatchCondition{{
 					Name:      "x-header",
 					Value:     "11.[22].*33.44",
 					MatchType: "contains",
@@ -748,7 +772,7 @@ func TestRouteMatch(t *testing.T) {
 		},
 		"path prefix": {
 			route: &dag.Route{
-				PathCondition: &dag.PrefixCondition{
+				PathMatchCondition: &dag.PrefixMatchCondition{
 					Prefix: "/foo",
 				},
 			},
@@ -760,7 +784,7 @@ func TestRouteMatch(t *testing.T) {
 		},
 		"path regex": {
 			route: &dag.Route{
-				PathCondition: &dag.RegexCondition{
+				PathMatchCondition: &dag.RegexMatchCondition{
 					Regex: "/v.1/*",
 				},
 			},
