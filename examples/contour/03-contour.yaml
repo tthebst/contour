@@ -4,6 +4,7 @@ kind: Deployment
 metadata:
   labels:
     app: contour
+    app.kubernetes.io/name: contour
   name: contour
   namespace: projectcontour
 spec:
@@ -24,6 +25,7 @@ spec:
         prometheus.io/port: "8000"
       labels:
         app: contour
+        app.kubernetes.io/name: contour
     spec:
       affinity:
         podAntiAffinity:

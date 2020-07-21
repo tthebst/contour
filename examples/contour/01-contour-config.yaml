@@ -4,6 +4,8 @@ kind: ConfigMap
 metadata:
   name: contour
   namespace: projectcontour
+  labels:
+    app.kubernetes.io/name: contour
 data:
   contour.yaml: |
     # should contour expect to be running inside a k8s cluster

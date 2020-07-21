@@ -4,6 +4,8 @@ kind: Service
 metadata:
   name: contour
   namespace: projectcontour
+  labels:
+    app.kubernetes.io/name: contour
 spec:
   ports:
   - port: 8001

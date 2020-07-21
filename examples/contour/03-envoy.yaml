@@ -4,6 +4,7 @@ kind: DaemonSet
 metadata:
   labels:
     app: envoy
+    app.kubernetes.io/name: envoy
   name: envoy
   namespace: projectcontour
 spec:
@@ -22,6 +23,7 @@ spec:
         prometheus.io/path: "/stats/prometheus"
       labels:
         app: envoy
+        app.kubernetes.io/name: envoy
     spec:
       containers:
       - command:
